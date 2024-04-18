@@ -1,4 +1,4 @@
-import { Component, useState } from "react";
+import { Component, useEffect, useState } from "react";
 import { MainContainer } from "./App.styled";
 import { Searchbar } from "components/Searchbar/";
 import { ImageGallery } from "components/ImageGallery";
@@ -19,57 +19,60 @@ export function App() {
   const [error, setError] = useState(null);
   const [modalImage, setModalImage] = useState(null);
 
-    
-  const onSearchSubmit = (imageName) => {
+  useEffect(() => {
+    const prevImages = searchQuery;
+    const prevPage = page;
+    const nextImages = searchQuery;
+    const nextPage = page;
+
+    if ((prevImages !== nextImages || prevPage !== nextPage) && status !== 'pending') {
+      setStatus('pending');
+      if (nextPage === 1) {
+        setImages([]);
+      }
+      fetchPics();
+    }
+  }, [searchQuery, page]);
+  
+    const onSearchSubmit = (imageName) => {
     if (imageName !== searchQuery && status !== 'pending') {
       setSearchQuery(imageName);
       setPage(1);
       setImages([]);
       setStatus('pending');
-      () => { fetchPics() };
+  }
+};
 
-  }
-  }
-  
   const fetchPics = () => {
-
       getPics(searchQuery, page)
         .then(response => {
           console.log('Response from getPics:', response);
           const hits = response.hits;
           
           if (!hits || hits.length === 0) {
-            this.setState ({
-              status: 'rejected',
-            })
+            setStatus('rejected');
           } else {
-            this.setState((prevState) => ({
-              images: page === 1 ? hits : [...prevState.images, ...hits],
-              status: 'resolved',
-              totalHits: response.totalHits,
-            }))
+            setImages(prevImages => page === 1 ? hits : [...prevImages, ...hits]);
+            setStatus('resolved');
+            setTotalHits(response.totalHits);
           }
       })
         .catch(error => {
           console.log(error);
-          this.setState({ error: error.message, status: 'rejected' });
-        })
+          setError(error.message);
+          setStatus('rejected');
+        });
   }
 
   const loadMore = () => {
-      this.setState((prevState) => ({
-        page: prevState.page + 1,
-      }), () => {
-        fetchPics();
-      });
+    setPage(prevPage => prevPage + 1);
   }
 
   const toggleModal = largeImageURL => {
-    this.setState(({ showModal }) => ({
-      showModal: !showModal,
-      modalImage: largeImageURL,
-    }));
-  };
+      setShowModal(prevShowModal => !prevShowModal);
+      setModalImage(largeImageURL);
+    };
+
 
   return (
       <MainContainer>
